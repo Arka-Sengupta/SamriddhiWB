@@ -1,10 +1,14 @@
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AuthModalsProps {
   isLoginOpen: boolean;
@@ -31,28 +35,77 @@ const AuthModals = ({
     password: '', 
     confirmPassword: '' 
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const { login } = useAuth();
+  const { toast } = useToast();
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', loginData);
+    setIsLoading(true);
+    try {
+      await login(loginData.email, loginData.password);
+      toast({
+        title: 'Welcome back!',
+        description: 'You have been logged in successfully',
+        className: 'bg-green-500 text-white',
+      });
+      onLoginClose();
+    } catch (error: any) {
+      toast({
+        title: 'Login failed',
+        description: error.message || 'Failed to login. Please check your credentials.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const { register } = useAuth();
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle register logic here
-    console.log('Register attempt:', registerData);
+    if (registerData.password !== registerData.confirmPassword) {
+      toast({
+        title: 'Password mismatch',
+        description: 'Passwords do not match. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await register(registerData.name, registerData.email, registerData.password);
+      toast({
+        title: 'Welcome to SamriddhiWB!',
+        description: 'Your account has been created successfully',
+        className: 'bg-green-500 text-white',
+      });
+      onRegisterClose();
+    } catch (error: any) {
+      toast({
+        title: 'Registration failed',
+        description: error.message || 'Failed to create account. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <>
       {/* Login Modal */}
       <Dialog open={isLoginOpen} onOpenChange={onLoginClose}>
-        <DialogContent className="sm:max-w-[425px] bg-dark-container border-gray-600">
+        <DialogContent className="sm:max-w-[425px] bg-dark-container border-gray-600 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center text-primary-text">
               Welcome Back
             </DialogTitle>
+            <DialogDescription className="text-center text-secondary-text">
+              Sign in to your account to continue
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -77,8 +130,22 @@ const AuthModals = ({
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-terracotta hover:bg-terracotta/90">
-              Login
+            <Button 
+              type="submit" 
+              className={cn(
+                "w-full bg-terracotta hover:bg-terracotta/90 transition-all",
+                isLoading && "opacity-50 cursor-not-allowed"
+              )}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign in'
+              )}
             </Button>
           </form>
           <div className="text-center text-sm text-secondary-text">
@@ -95,11 +162,14 @@ const AuthModals = ({
 
       {/* Register Modal */}
       <Dialog open={isRegisterOpen} onOpenChange={onRegisterClose}>
-        <DialogContent className="sm:max-w-[425px] bg-dark-container border-gray-600">
+        <DialogContent className="sm:max-w-[425px] bg-dark-container border-gray-600 shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center text-primary-text">
               Join SamriddhiWB
             </DialogTitle>
+            <DialogDescription className="text-center text-secondary-text">
+              Create your account to get started
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleRegisterSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -146,8 +216,22 @@ const AuthModals = ({
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-terracotta hover:bg-terracotta/90">
-              Create Account
+            <Button 
+              type="submit" 
+              className={cn(
+                "w-full bg-terracotta hover:bg-terracotta/90 transition-all",
+                isLoading && "opacity-50 cursor-not-allowed"
+              )}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                'Create Account'
+              )}
             </Button>
           </form>
           <div className="text-center text-sm text-secondary-text">

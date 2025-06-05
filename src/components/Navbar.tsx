@@ -2,7 +2,14 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import AuthModals from './AuthModals';
@@ -13,6 +20,7 @@ const Navbar = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const location = useLocation();
   const { t } = useLanguage();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navItems = [
     { href: "/marketplace", label: t('nav.marketplace') },
@@ -88,20 +96,50 @@ const Navbar = () => {
             {/* CTA Buttons and Language Switcher */}
             <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
               <LanguageSwitcher />
-              <button 
-                onClick={handleLoginClick}
-                className="relative px-4 py-2 text-sm text-secondary-text rounded-full border border-gray-600 overflow-hidden group transition-all duration-300 hover:text-white"
-              >
-                <span className="absolute inset-0 bg-terracotta transform -skew-x-12 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
-                <span className="relative z-10">{t('nav.login')}</span>
-              </button>
-              <Button 
-                size="sm" 
-                onClick={handleRegisterClick}
-                className="bg-terracotta hover:bg-terracotta/90 text-white text-sm rounded-full"
-              >
-                {t('nav.joinNow')}
-              </Button>
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                        <User size={16} />
+                        <span>{user?.name}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-white/[0.02] backdrop-blur-2xl border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.4)] rounded-xl overflow-hidden">
+                      <DropdownMenuItem className="bg-transparent hover:bg-white/[0.07] transition-all duration-300 ease-in-out">
+                        <Link to="/profile" className="flex items-center w-full text-white/95 font-medium p-3 rounded-lg">
+                          <User size={16} className="mr-3 text-white/80" />
+                          View Profile
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-red-300 hover:bg-red-500/5 hover:text-red-200 transition-all duration-300 ease-in-out p-3"
+                        onClick={logout}
+                      >
+                        <LogOut size={16} className="mr-3" />
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
+                <>
+                  <button 
+                    onClick={handleLoginClick}
+                    className="relative px-4 py-2 text-sm text-secondary-text rounded-full border border-gray-600 overflow-hidden group transition-all duration-300 hover:text-white"
+                  >
+                    <span className="absolute inset-0 bg-terracotta transform -skew-x-12 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
+                    <span className="relative z-10">{t('nav.login')}</span>
+                  </button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleRegisterClick}
+                    className="bg-terracotta hover:bg-terracotta/90 text-white text-sm rounded-full"
+                  >
+                    {t('nav.joinNow')}
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Mobile menu button */}
