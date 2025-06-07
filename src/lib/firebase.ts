@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,12 +17,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 // User type definition
 export interface FirebaseUser {
   uid: string;
   name: string;
   email: string;
+}
+
+// Post type definition
+export interface Post {
+  id?: string;
+  title: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  timestamp: any;
+  likes: number;
+  replies: number;
+  category: string;
+  tags: string[];
+  audioUrl?: string;
 }
 
 // Authentication functions
@@ -48,15 +65,8 @@ export const registerUser = async (email: string, password: string, name: string
 export const loginUser = async (email: string, password: string): Promise<FirebaseUser> => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    
-    // Get user profile from Firestore
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    if (userDoc.exists()) {
-      return userDoc.data() as FirebaseUser;
-    } else {
-      throw new Error('User profile not found');
-    }
+    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+    return userDoc.data() as FirebaseUser;
   } catch (error) {
     console.error('Error logging in:', error);
     throw error;
@@ -68,6 +78,47 @@ export const logoutUser = async (): Promise<void> => {
     await signOut(auth);
   } catch (error) {
     console.error('Error logging out:', error);
+    throw error;
+  }
+};
+
+// Post management functions
+export const createPost = async (post: Omit<Post, 'id' | 'timestamp' | 'likes' | 'replies'>, audioFile?: File): Promise<string> => {
+  try {
+    let audioUrl = '';
+    
+    if (audioFile) {
+      const storageRef = ref(storage, `post-audio/${Date.now()}-${audioFile.name}`);
+      await uploadBytes(storageRef, audioFile);
+      audioUrl = await getDownloadURL(storageRef);
+    }
+
+    const postData = {
+      ...post,
+      timestamp: serverTimestamp(),
+      likes: 0,
+      replies: 0,
+      audioUrl
+    };
+
+    const docRef = await addDoc(collection(db, 'posts'), postData);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+};
+
+export const getPosts = async (): Promise<Post[]> => {
+  try {
+    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Post[];
+  } catch (error) {
+    console.error('Error fetching posts:', error);
     throw error;
   }
 };
